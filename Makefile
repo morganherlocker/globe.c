@@ -13,7 +13,9 @@ SRC = elevation.c
 # Object files
 OBJS = $(SRCS:.cc=.o)
 
-FORMAT = clang-tidy --fix
+LINT = clang-tidy --fix
+
+FORMAT = clang-format -i
 
 # Default target
 all: clean $(TARGET)
@@ -21,8 +23,11 @@ all: clean $(TARGET)
 $(TARGET):
 	$(CXX) $(CXXFLAGS) -o $(TARGET) $(SRC)
 
+lint:
+	$(LINT) $(SRC) -- $(CXXFLAGS)
+
 format:
-	$(FORMAT) $(SRC) -- $(CXXFLAGS)
+	$(FORMAT) $(SRC)
 
 # Clean up build files
 clean:
