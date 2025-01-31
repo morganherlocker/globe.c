@@ -1,4 +1,5 @@
 #include <errno.h>
+#include <math.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -17,6 +18,42 @@ struct Chunk {
   size_t num_rows;
   size_t num_pts;
 };
+
+void elev_to_rgb(int16_t value, uint8_t *r, uint8_t *g, uint8_t *b) {
+  if (value <= 0) { // water
+    *r = 250;
+    *g = 250;
+    *b = 121;
+  } else if (value <= 5) { // beach
+    *r = 230;
+    *g = 230;
+    *b = 200;
+  } else if (value <= 18) { // sand
+    *r = 237;
+    *g = 222;
+    *b = 122;
+  } else if (value <= 600) { // lowland
+    *r = 100;
+    *g = 200;
+    *b = 100;
+  } else if (value <= 900) { // midland
+    *r = 40;
+    *g = 140;
+    *b = 50;
+  } else if (value <= 1000) { // highland
+    *r = 40;
+    *g = 120;
+    *b = 60;
+  } else if (value <= 1800) { // mountain
+    *r = 145;
+    *g = 145;
+    *b = 145;
+  } else { // snow
+    *r = 255;
+    *g = 255;
+    *b = 255;
+  }
+}
 
 int main() {
   struct Chunk chunks[NUM_CHUNKS] = {{"all10/a11g", 10800, 4800, 51840000},
@@ -123,6 +160,39 @@ int main() {
            num_vals, mean, min, max);
 
     memcpy(globe_data + offset, chunk_data, num_vals * sizeof(int16_t));
+
+    // write .ppm image
+    FILE *fppm;
+
+    // Open chunk file.
+    char ppm_name[6];
+    ppm_name[0] = chunk.name[6];
+    ppm_name[1] = '.';
+    ppm_name[2] = 'p';
+    ppm_name[3] = 'p';
+    ppm_name[4] = 'm';
+    ppm_name[5] = '\0';
+    printf("%s\n", ppm_name);
+    if ((fppm = fopen(ppm_name, "wb")) == NULL) {
+      perror("fopen");
+      exit(1);
+    }
+
+    fprintf(fppm, "P6\n%zu %zu\n255\n", chunk.num_cols, chunk.num_rows);
+    uint8_t r, g, b;
+    for (size_t i = 0; i < num_vals; i++) {
+      if (chunk_data[i] == NO_DATA) {
+        r = 10;
+        g = 20;
+        b = 140;
+      } else {
+        elev_to_rgb(chunk_data[i], &r, &g, &b);
+      }
+      fwrite(&r, 1, 1, fppm);
+      fwrite(&g, 1, 1, fppm);
+      fwrite(&b, 1, 1, fppm);
+    }
+    fclose(fppm);
 
     offset += chunk.num_pts;
   }

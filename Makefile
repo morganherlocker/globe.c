@@ -2,16 +2,13 @@
 CXX = clang
 
 # Compiler flags
-CXXFLAGS = -Wall -Wextra -O3
+CXXFLAGS = -std=c99 -Wall -Wextra -O3
 
 # Target executable
-TARGET = elevation
+TARGET = globe
 
 # Source file
-SRC = elevation.c
-
-# Object files
-OBJS = $(SRCS:.cc=.o)
+SRC = globe.c
 
 LINT = clang-tidy --fix
 
@@ -23,7 +20,7 @@ all: clean $(TARGET)
 $(TARGET):
 	$(CXX) $(CXXFLAGS) -o $(TARGET) $(SRC)
 
-lint:
+lint: format
 	$(LINT) $(SRC) -- $(CXXFLAGS)
 
 format:
@@ -34,4 +31,4 @@ clean:
 	rm -f $(TARGET)
 
 # Phony targets
-.PHONY: all clean
+.PHONY: all clean lint format

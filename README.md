@@ -34,19 +34,26 @@ du -h all10/*
 
 # size of all files
 du -h all10
-1.8G    all10
+  1.8G   all10
 ```
 
 ## Build
 
-Must install clang and clang-tidy.
+Requires clang, clang-format, clang-tidy.
 
 ```sh
 make
 ```
 
+## Format
+
+```sh
+make lint;
+```
+
 ## Use
 
 ```sh
-./elevation
+globe merge -o globe.bin
+globe 
 ```
