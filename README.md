@@ -3,6 +3,8 @@ GLOBE.c
 
 C parser for the [Global Land One-kilometer Base Elevation (GLOBE)](https://www.ngdc.noaa.gov/mgg/topo/report/globedocumentationmanual.pdf) dataset. This dataset is a compilation of many elevation datasets combined by NOAA in 1999, representing a global-coverage ~1km resolution digital elevation model.
 
+This data is suitable for medium-resolution global terrain modeling in a light memory footprint. The raw data from NOAA is 1.8GB uncompressed.
+
 ## Download
 
 ```sh
@@ -51,9 +53,9 @@ make
 make lint;
 ```
 
-## Use
+## Use (WIP)
 
 ```sh
-globe merge -o globe.bin
-globe 
+globe --noaa ./all10 -o ./globe.bin merge
+globe --in ./globe.bin -o ./globe.ppm render
 ```
