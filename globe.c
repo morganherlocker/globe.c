@@ -1,3 +1,6 @@
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "stb_image_write.h"
+
 #include <errno.h>
 #include <math.h>
 #include <stdint.h>
@@ -58,11 +61,11 @@ void elev_to_rgb(int16_t value, uint8_t *r, uint8_t *g, uint8_t *b) {
 
 void print_help() {
   printf("Usage:\n");
-  printf("globe -i ./all10 -o ./globe.bin merge;\n");
+  printf("globe -o ./globe.bin merge;\n");
   printf("globe -i ./globe.bin -o globe.ppm render;\n");
 }
 
-int merge() {
+int merge(char *out_file) {
   struct Chunk chunks[NUM_CHUNKS] = {{"all10/a11g", 10800, 4800, 51840000},
                                      {"all10/b10g", 10800, 4800, 51840000},
                                      {"all10/c10g", 10800, 4800, 51840000},
@@ -179,52 +182,20 @@ int merge() {
 
     memcpy(globe_data + offset, chunk_data, num_vals * sizeof(int16_t));
 
-    // Write .ppm image.
-    FILE *fppm;
-    char ppm_name[] = {chunk.name[6], '.', 'p', 'p', 'm', '\0'};
-    printf("%s\n", ppm_name);
-    if ((fppm = fopen(ppm_name, "wb")) == NULL) {
-      perror("fopen");
-      exit(1);
-    }
-
-    fprintf(fppm, "P6\n%zu %zu\n255\n", chunk.num_cols, chunk.num_rows);
-    uint8_t r, g, b;
-    for (size_t i = 0; i < num_vals; i++) {
-      if (chunk_data[i] == NO_DATA) {
-        r = 10;
-        g = 20;
-        b = 140;
-      } else {
-        elev_to_rgb(chunk_data[i], &r, &g, &b);
-      }
-      fwrite(&r, 1, 1, fppm);
-      fwrite(&g, 1, 1, fppm);
-      fwrite(&b, 1, 1, fppm);
-    }
-    fclose(fppm);
-
     offset += chunk.num_pts;
   }
 
-  // Calculate globe stats.
-  int16_t min = INT16_MAX;
-  int16_t max = INT16_MIN;
-  float sum = 0.0;
-  for (size_t i = 0; i < GLOBE_CELLS; i++) {
-    if (globe_data[i] != NO_DATA) {
-      sum += globe_data[i];
-      if (globe_data[i] < min)
-        min = globe_data[i];
-      if (globe_data[i] > max)
-        max = globe_data[i];
-    }
+  // Write globe bin data.
+  FILE *globe_bin_file;
+  // char globebin_name[] = "globe.16int_t.bin";
+  if ((globe_bin_file = fopen(out_file, "wb")) == NULL) {
+    perror("fopen");
+    exit(1);
   }
-  float mean = sum / GLOBE_CELLS;
 
-  // Log globe info.
-  printf("name: GLOBE, count: %zu, mean: %.2f, min: %hd, max: %hd\n",
-         GLOBE_CELLS, mean, min, max);
+  fwrite(globe_data, sizeof(int16_t), GLOBE_CELLS, globe_bin_file);
+
+  fclose(globe_bin_file);
 
   // Free data.
   free(chunk_data);
@@ -234,60 +205,32 @@ int merge() {
 }
 
 int render(char *in_file, char *out_file) {
-  int16_t *data = malloc(GLOBE_CELLS * sizeof(int16_t));
-  if (data == NULL) {
+  int16_t *globe_data = malloc(GLOBE_CELLS * sizeof(int16_t));
+  if (globe_data == NULL) {
     perror("globe malloc");
     return 1;
   }
 
   FILE *fp;
-  size_t num_vals;
-
+  printf("reading: %s\n", in_file);
   // Open file.
   if ((fp = fopen(in_file, "rb")) == NULL) {
     perror("fopen");
-    free(data);
+    free(globe_data);
     return 1;
   }
   if (ferror(fp)) {
     perror("fopen");
     fclose(fp);
-    return 1;
-  }
-
-  // Find end of chunk.
-  fseek(fp, 0, SEEK_END);
-  if (ferror(fp)) {
-    perror("fseek");
-    fclose(fp);
-    free(data);
-    return 1;
-  }
-  errno = 0;
-  size_t file_length = ftell(fp);
-  if (errno != 0) {
-    perror("ftell");
-    fclose(fp);
-    free(data);
-    return 1;
-  }
-
-  // Go back to start of chunk.
-  errno = 0;
-  rewind(fp);
-  if (errno != 0) {
-    perror("rewind");
-    fclose(fp);
-    free(data);
     return 1;
   }
 
   // Read file into array.
-  num_vals = fread(data, sizeof(int16_t), file_length / sizeof(int16_t), fp);
+  fread(globe_data, sizeof(int16_t), GLOBE_CELLS / sizeof(int16_t), fp);
   if (ferror(fp)) {
     perror("fread");
     fclose(fp);
-    free(data);
+    free(globe_data);
     return 1;
   }
 
@@ -295,32 +238,85 @@ int render(char *in_file, char *out_file) {
   fclose(fp);
 
   // Write .ppm image.
-  FILE *fppm;
-  char *ppm_name = out_file;
+  // FILE *globe_img_file;
+  printf("writing: %s\n", out_file);
+  int width = 800;
+  int height = 800;
+  int channels = 3; // RGB
 
-  printf("writing %s\n", ppm_name);
-  if ((fppm = fopen(ppm_name, "wb")) == NULL) {
-    perror("fopen");
-    exit(1);
+  // Allocate memory for the image data
+  unsigned char *image = (unsigned char *)malloc(GLOBE_CELLS * channels);
+
+  if (image == NULL) {
+    fprintf(stderr, "Failed to allocate memory for image.\n");
+    free(globe_data);
+    return 1;
   }
 
-  fprintf(fppm, "P6\n%zu %zu\n255\n", (size_t)10800, (size_t)4800);
+  /*
+  // stb_image_write demo. Creates a tiled gradient image.
+  for (int y = 0; y < height; y++) {
+      for (int x = 0; x < width; x++) {
+          int index = (y * width + x) * channels;
+          image[index + 0] = x;       // Red
+          image[index + 1] = y;       // Green
+          image[index + 2] = 128;     // Blue
+      }
+  }*/
+
+  // Convert data to rgb.
   uint8_t r, g, b;
-  for (size_t i = 0; i < num_vals; i++) {
-    if (data[i] == NO_DATA) {
+  for (size_t i = 0; i < (size_t)(width * height); i++) {
+    if (globe_data[i] == NO_DATA) {
       r = 10;
       g = 20;
       b = 140;
     } else {
-      elev_to_rgb(data[i], &r, &g, &b);
-    }
-    fwrite(&r, 1, 1, fppm);
-    fwrite(&g, 1, 1, fppm);
-    fwrite(&b, 1, 1, fppm);
-  }
-  fclose(fppm);
+      elev_to_rgb(globe_data[i], &r, &g, &b);
 
-  free(data);
+      image[i] = r;
+      image[i + 1] = g;
+      image[i + 2] = b;
+    }
+  }
+
+  // Write the image to a PNG file
+  if (!stbi_write_png(out_file, width, height, channels, image,
+                      width * channels)) {
+    fprintf(stderr, "Failed to write image to file.\n");
+    free(image);
+    return 1;
+  }
+
+  // Free the allocated memory
+  free(image);
+
+  /*
+  if ((globe_img_file = fopen(out_file, "wb")) == NULL) {
+    perror("fopen");
+    exit(1);
+  }
+  fprintf(globe_img_file, "P6\n%zu %zu\n255\n", GLOBE_COLS, GLOBE_ROWS);
+  uint8_t r, g, b;
+  for (size_t i = 0; i < num_vals; i++) {
+    if (globe_data[i] == NO_DATA) {
+      r = 10;
+      g = 20;
+      b = 140;
+    } else {
+      elev_to_rgb(globe_data[i], &r, &g, &b);
+    }
+    r = 250;
+    g = 20;
+    b = 250;
+    fwrite(&r, 1, 1, globe_img_file);
+    fwrite(&g, 1, 1, globe_img_file);
+    fwrite(&b, 1, 1, globe_img_file);
+  }
+  fclose(globe_img_file);
+  */
+
+  free(globe_data);
 
   return 0;
 }
@@ -331,6 +327,7 @@ int main(int argc, char **argv) {
   char *in = NULL;
   char *out = NULL;
 
+  // Parse flags.
   while ((opt = getopt(argc, argv, "-hi:o:")) != -1) {
     switch (opt) {
     case 'h':
@@ -354,6 +351,7 @@ int main(int argc, char **argv) {
     }
   }
 
+  // Parse and execute command.
   if (optind >= argc) {
     fprintf(stderr, "Error: Command argument is required.\n");
     print_help();
@@ -361,7 +359,7 @@ int main(int argc, char **argv) {
   }
   command = argv[optind];
   if (strcmp(command, "merge") == 0) {
-    int merge_result = merge();
+    int merge_result = merge(out);
     if (merge_result != 0)
       return merge_result;
   } else if (strcmp(command, "render") == 0) {

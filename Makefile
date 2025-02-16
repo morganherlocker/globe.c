@@ -2,7 +2,7 @@
 CXX = clang
 
 # Compiler flags
-CXXFLAGS = -std=c99 -Wall -Wextra -O3
+CXXFLAGS = -std=c99 -Wall -Wextra -O3 -I "./include"
 
 # Target executable
 TARGET = globe
