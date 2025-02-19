@@ -1,9 +1,9 @@
 GLOBE.c
 ---
 
-C parser for the [Global Land One-kilometer Base Elevation (GLOBE)](https://www.ngdc.noaa.gov/mgg/topo/report/globedocumentationmanual.pdf) dataset. This dataset is a compilation of many elevation datasets combined by NOAA in 1999, representing a global-coverage ~1km resolution digital elevation model.
+C parser & CLI toolset for the [Global Land One-kilometer Base Elevation (GLOBE)](https://www.ngdc.noaa.gov/mgg/topo/report/globedocumentationmanual.pdf) dataset. GLOBE is a global 1km-resolution digital elevation model, compiled by NOAA in 1999.
 
-This data is suitable for medium-resolution global terrain modeling in a light memory footprint. The raw data from NOAA is 1.8GB uncompressed.
+The data is suitable for medium-resolution global terrain modeling. The raw data is 1.8GB uncompressed.
 
 ## Download
 
@@ -53,19 +53,6 @@ Requires clang-format, clang-tidy.
 
 ```sh
 make lint;
-```
-
-## Example
-
-```sh
-globe -o ./globe.bin merge;
-globe -i ./globe.bin -o globe.csv table;
-
-# convert to parquet
-duckdb -c "copy (select * from globe.csv where elev > 0) to 'globe.parquet' (FORMAT PARQUET, COMPRESSION ZSTD, ROW_GROUP_SIZE 100_000)"
-
-# write an image
-globe -i ./globe.bin -o globe.png render;
 ```
 
 ## CLI

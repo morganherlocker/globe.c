@@ -25,39 +25,53 @@ struct Chunk {
   size_t col_offset;
 };
 
-void elev_to_rgb(int16_t value, uint8_t *r, uint8_t *g, uint8_t *b) {
-  if (value <= 0) { // water
-    *r = 10;
-    *g = 20;
-    *b = 140;
-  } else if (value <= 5) { // beach
-    *r = 230;
-    *g = 230;
-    *b = 200;
-  } else if (value <= 18) { // sand
-    *r = 237;
-    *g = 222;
-    *b = 122;
-  } else if (value <= 600) { // lowland
-    *r = 100;
-    *g = 200;
-    *b = 100;
-  } else if (value <= 900) { // midland
-    *r = 40;
-    *g = 140;
-    *b = 50;
-  } else if (value <= 1000) { // highland
-    *r = 40;
-    *g = 120;
-    *b = 60;
-  } else if (value <= 1800) { // mountain
-    *r = 145;
-    *g = 145;
-    *b = 145;
-  } else { // snow
-    *r = 255;
-    *g = 255;
-    *b = 255;
+enum RGBMode { TERRAIN, GREYSCALE };
+
+void elev_to_rgb(int16_t value, uint8_t *r, uint8_t *g, uint8_t *b,
+                 enum RGBMode rmode) {
+  uint8_t gray;
+  switch (rmode) {
+  case TERRAIN:
+    if (value < 0) { // water
+      *r = 10;
+      *g = 20;
+      *b = 140;
+    } else if (value <= 5) { // beach
+      *r = 130;
+      *g = 98;
+      *b = 95;
+    } else if (value <= 18) { // sand
+      *r = 107;
+      *g = 128;
+      *b = 75;
+    } else if (value <= 250) { // lowland
+      *r = 100;
+      *g = 200;
+      *b = 100;
+    } else if (value <= 900) { // midland
+      *r = 40;
+      *g = 140;
+      *b = 50;
+    } else if (value <= 1000) { // highland
+      *r = 40;
+      *g = 120;
+      *b = 60;
+    } else if (value <= 1800) { // mountain
+      *r = 145;
+      *g = 145;
+      *b = 145;
+    } else { // snow
+      *r = 255;
+      *g = 255;
+      *b = 255;
+    }
+    break;
+  case GREYSCALE:
+    gray = (uint8_t)((value + 500) * 255 / 9000);
+    *r = gray;
+    *g = gray;
+    *b = gray;
+    break;
   }
 }
 
@@ -301,8 +315,8 @@ int render(char *in_file, char *out_file) {
 
   // Write .png image.
   printf("writing: %s\n", out_file);
-  size_t width = GLOBE_COLS / 2;
-  size_t height = GLOBE_ROWS / 2;
+  size_t width = GLOBE_COLS / 1.5;
+  size_t height = GLOBE_ROWS;
   int channels = 3; // RGB
 
   // Allocate memory for the image data
@@ -328,11 +342,11 @@ int render(char *in_file, char *out_file) {
         idx = y * GLOBE_COLS + x;
 
         if (globe_data[idx] == NO_DATA) {
-          r = 10;
-          g = 20;
-          b = 140;
+          r = 30;
+          g = 40;
+          b = 80;
         } else {
-          elev_to_rgb(globe_data[idx], &r, &g, &b);
+          elev_to_rgb(globe_data[idx], &r, &g, &b, TERRAIN);
         }
         image[image_idx + 0] = r;
         image[image_idx + 1] = g;
