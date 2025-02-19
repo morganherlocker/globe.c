@@ -2,6 +2,4 @@ all10g.tgz
 all10
 globe.dSYM
 globe
-globe.o
-globe.bin
-globe.png
+globe.*

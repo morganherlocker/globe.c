@@ -41,7 +41,7 @@ du -h all10
 
 ## Build
 
-Requires clang, clang-format, clang-tidy.
+Requires clang.
 
 ```sh
 make
@@ -49,13 +49,78 @@ make
 
 ## Format
 
+Requires clang-format, clang-tidy.
+
 ```sh
 make lint;
 ```
 
-## Use (WIP)
+## Example
 
 ```sh
-globe --noaa ./all10 -o ./globe.bin merge
-globe --in ./globe.bin -o ./globe.ppm render
+globe -o ./globe.bin merge;
+globe -i ./globe.bin -o globe.csv table;
+
+# convert to parquet
+duckdb -c "copy (select * from globe.csv where elev > 0) to 'globe.parquet' (FORMAT PARQUET, COMPRESSION ZSTD, ROW_GROUP_SIZE 100_000)"
+
+# write an image
+globe -i ./globe.bin -o globe.png render;
+```
+
+## CLI
+
+### help
+
+```sh
+globe -h
+```
+
+### merge
+
+Flatten shards into a single global array and writes to raw bin file. `./globe.bin` is 1.7G raw, 231M zstd compressed.
+
+```sh
+globe -i ./all10 -o ./globe.bin merge;
+
+du -h globe.bin*
+# 1.7G    globe.bin
+# 241M    globe.bin.zst
+```
+
+## render
+
+Write a png of a bounding box.
+
+```sh
+globe -i ./globe.bin -o globe.png render;
+```
+
+## table
+
+Write csv table file, with the format: lon, lat, elevation.
+
+```sh
+globe -i ./globe.bin -o globe.csv table;
+```
+
+This csv can be converted to parquet with following duckdb command for more efficient storage and querying:
+
+```sh
+# Convert to parquet.
+duckdb -c "copy (select * from globe.csv where elev > 0) to 'globe.parquet' (FORMAT PARQUET, COMPRESSION ZSTD, ROW_GROUP_SIZE 100_000)"
+# Select highest and lowest point on earth.
+duckdb -c 'select * from globe.csv order by elev desc limit 1; select * from globe.csv order by elev asc limit 1;'
+# ┌───────────┬──────────┬───────┐
+# │    lon    │   lat    │ elev  │
+# │  double   │  double  │ int64 │
+# ├───────────┼──────────┼───────┤
+# │ 86.874268 │ 28.00589 │  8752 │
+# └───────────┴──────────┴───────┘
+# ┌───────────┬───────────┬───────┐
+# │    lon    │    lat    │ elev  │
+# │  double   │  double   │ int64 │
+# ├───────────┼───────────┼───────┤
+# │ 35.320187 │ 30.997511 │  -407 │
+# └───────────┴───────────┴───────┘
 ```

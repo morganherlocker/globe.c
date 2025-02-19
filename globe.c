@@ -15,19 +15,21 @@
 #define MAX_CHUNK_SIZE ((size_t)10800 * 6000)
 #define NUM_CHUNKS ((size_t)16)
 #define NO_DATA -500
+#define CELL_DEG 0.008333
 
 struct Chunk {
   char name[11];
   size_t num_cols;
   size_t num_rows;
-  size_t num_pts;
+  size_t row_offset;
+  size_t col_offset;
 };
 
 void elev_to_rgb(int16_t value, uint8_t *r, uint8_t *g, uint8_t *b) {
   if (value <= 0) { // water
-    *r = 250;
-    *g = 250;
-    *b = 121;
+    *r = 10;
+    *g = 20;
+    *b = 140;
   } else if (value <= 5) { // beach
     *r = 230;
     *g = 230;
@@ -62,26 +64,28 @@ void elev_to_rgb(int16_t value, uint8_t *r, uint8_t *g, uint8_t *b) {
 void print_help() {
   printf("Usage:\n");
   printf("globe -o ./globe.bin merge;\n");
-  printf("globe -i ./globe.bin -o globe.ppm render;\n");
+  printf("globe -i ./globe.bin -o globe.csv table;\n");
+  printf("globe -i ./globe.bin -o globe.png render;\n");
 }
 
 int merge(char *out_file) {
-  struct Chunk chunks[NUM_CHUNKS] = {{"all10/a11g", 10800, 4800, 51840000},
-                                     {"all10/b10g", 10800, 4800, 51840000},
-                                     {"all10/c10g", 10800, 4800, 51840000},
-                                     {"all10/d10g", 10800, 4800, 51840000},
-                                     {"all10/e10g", 10800, 6000, 64800000},
-                                     {"all10/f10g", 10800, 6000, 64800000},
-                                     {"all10/g10g", 10800, 6000, 64800000},
-                                     {"all10/h10g", 10800, 6000, 64800000},
-                                     {"all10/i10g", 10800, 6000, 64800000},
-                                     {"all10/j10g", 10800, 6000, 64800000},
-                                     {"all10/k10g", 10800, 6000, 64800000},
-                                     {"all10/l10g", 10800, 6000, 64800000},
-                                     {"all10/m10g", 10800, 4800, 51840000},
-                                     {"all10/n10g", 10800, 4800, 51840000},
-                                     {"all10/o10g", 10800, 4800, 51840000},
-                                     {"all10/p10g", 10800, 4800, 51840000}};
+  struct Chunk chunks[NUM_CHUNKS] = {
+      {"all10/a11g", 10800, 4800, 0, 0},
+      {"all10/b10g", 10800, 4800, 0, 10800},
+      {"all10/c10g", 10800, 4800, 0, 10800 * 2},
+      {"all10/d10g", 10800, 4800, 0, 10800 * 3},
+      {"all10/e10g", 10800, 6000, 4800, 0},
+      {"all10/f10g", 10800, 6000, 4800, 10800},
+      {"all10/g10g", 10800, 6000, 4800, 10800 * 2},
+      {"all10/h10g", 10800, 6000, 4800, 10800 * 3},
+      {"all10/i10g", 10800, 6000, 4800 + 6000, 0},
+      {"all10/j10g", 10800, 6000, 4800 + 6000, 10800},
+      {"all10/k10g", 10800, 6000, 4800 + 6000, 10800 * 2},
+      {"all10/l10g", 10800, 6000, 4800 + 6000, 10800 * 3},
+      {"all10/m10g", 10800, 4800, 4800 + 6000 + 6000, 0},
+      {"all10/n10g", 10800, 4800, 4800 + 6000 + 6000, 10800},
+      {"all10/o10g", 10800, 4800, 4800 + 6000 + 6000, 10800 * 2},
+      {"all10/p10g", 10800, 4800, 4800 + 6000 + 6000, 10800 * 3}};
 
   // Alocate array for chunk. Reused and freed at the end.
   int16_t *chunk_data = malloc(MAX_CHUNK_SIZE * sizeof(int16_t));
@@ -97,7 +101,6 @@ int merge(char *out_file) {
     return 1;
   }
 
-  size_t offset = 0;
   for (size_t c = 0; c < NUM_CHUNKS; c++) {
     struct Chunk chunk = chunks[c];
 
@@ -109,11 +112,6 @@ int merge(char *out_file) {
       perror("fopen");
       free(chunk_data);
       free(globe_data);
-      return 1;
-    }
-    if (ferror(fp)) {
-      perror("fopen");
-      fclose(fp);
       return 1;
     }
 
@@ -180,9 +178,18 @@ int merge(char *out_file) {
     printf("name: %s, count: %zu, mean: %.2f, min: %hd, max: %hd\n", chunk.name,
            num_vals, mean, min, max);
 
-    memcpy(globe_data + offset, chunk_data, num_vals * sizeof(int16_t));
-
-    offset += chunk.num_pts;
+    // Copy chunk data row by row into global array.
+    size_t row_offset = chunk.row_offset;
+    for (size_t row = 0; row < chunk.num_rows; row++) {
+      // Calculate the starting position in globe_data for this row.
+      size_t globe_row_start =
+          (row_offset + row) * GLOBE_COLS + chunk.col_offset;
+      // Calculate the starting position in chunk_data for this row.
+      size_t chunk_row_start = row * chunk.num_cols;
+      // Copy the row from chunk_data to globe_data.
+      memcpy(globe_data + globe_row_start, chunk_data + chunk_row_start,
+             chunk.num_cols * sizeof(int16_t));
+    }
   }
 
   // Write globe bin data.
@@ -204,7 +211,7 @@ int merge(char *out_file) {
   return 0;
 }
 
-int render(char *in_file, char *out_file) {
+int table(char *in_file, char *out_file) {
   int16_t *globe_data = malloc(GLOBE_CELLS * sizeof(int16_t));
   if (globe_data == NULL) {
     perror("globe malloc");
@@ -212,16 +219,10 @@ int render(char *in_file, char *out_file) {
   }
 
   FILE *fp;
-  printf("reading: %s\n", in_file);
   // Open file.
   if ((fp = fopen(in_file, "rb")) == NULL) {
     perror("fopen");
     free(globe_data);
-    return 1;
-  }
-  if (ferror(fp)) {
-    perror("fopen");
-    fclose(fp);
     return 1;
   }
 
@@ -237,15 +238,75 @@ int render(char *in_file, char *out_file) {
   // Done, close file.
   fclose(fp);
 
-  // Write .ppm image.
-  // FILE *globe_img_file;
+  // Open csv.
+  FILE *globe_csv_file;
+  // Open file.
+  if ((globe_csv_file = fopen(out_file, "ab")) == NULL) {
+    perror("fopen");
+    free(globe_data);
+    return 1;
+  }
+
+  // Traverse cells.
+  float lon = -180.0;
+  float lat = 90.0;
+  int16_t elevation = NO_DATA;
+  size_t idx = 0;
+  fprintf(globe_csv_file, "lon,lat,elev\n");
+  for (size_t y = 0; y < GLOBE_ROWS; y++) {
+    for (size_t x = 0; x < GLOBE_COLS; x++) {
+      idx = y * GLOBE_COLS + x;
+      elevation = globe_data[idx];
+
+      if (elevation != NO_DATA && elevation != 0) {
+        fprintf(globe_csv_file, "%f,%f,%d\n", lon, lat, elevation);
+      }
+      lon += 0.008333;
+      idx++;
+    }
+    lon = -180.0;
+    lat -= 0.008333;
+  }
+
+  return 0;
+}
+
+int render(char *in_file, char *out_file) {
+  int16_t *globe_data = malloc(GLOBE_CELLS * sizeof(int16_t));
+  if (globe_data == NULL) {
+    perror("globe malloc");
+    return 1;
+  }
+
+  FILE *fp;
+  printf("reading: %s\n", in_file);
+  // Open file.
+  if ((fp = fopen(in_file, "rb")) == NULL) {
+    perror("fopen");
+    free(globe_data);
+    return 1;
+  }
+
+  // Read file into array.
+  fread(globe_data, sizeof(int16_t), GLOBE_CELLS / sizeof(int16_t), fp);
+  if (ferror(fp)) {
+    perror("fread");
+    fclose(fp);
+    free(globe_data);
+    return 1;
+  }
+
+  // Done, close file.
+  fclose(fp);
+
+  // Write .png image.
   printf("writing: %s\n", out_file);
-  int width = 800;
-  int height = 800;
+  size_t width = GLOBE_COLS / 2;
+  size_t height = GLOBE_ROWS / 2;
   int channels = 3; // RGB
 
   // Allocate memory for the image data
-  unsigned char *image = (unsigned char *)malloc(GLOBE_CELLS * channels);
+  uint8_t *image = malloc(width * height * channels);
 
   if (image == NULL) {
     fprintf(stderr, "Failed to allocate memory for image.\n");
@@ -253,69 +314,47 @@ int render(char *in_file, char *out_file) {
     return 1;
   }
 
-  /*
-  // stb_image_write demo. Creates a tiled gradient image.
-  for (int y = 0; y < height; y++) {
-      for (int x = 0; x < width; x++) {
-          int index = (y * width + x) * channels;
-          image[index + 0] = x;       // Red
-          image[index + 1] = y;       // Green
-          image[index + 2] = 128;     // Blue
-      }
-  }*/
-
   // Convert data to rgb.
   uint8_t r, g, b;
-  for (size_t i = 0; i < (size_t)(width * height); i++) {
-    if (globe_data[i] == NO_DATA) {
-      r = 10;
-      g = 20;
-      b = 140;
-    } else {
-      elev_to_rgb(globe_data[i], &r, &g, &b);
+  float lon = -180.0;
+  float lat = 90.0;
+  size_t idx = 0;
+  size_t image_idx = 0;
+  for (size_t y = 0; y < GLOBE_ROWS; y++) {
+    image_idx = y * width * channels;
+    for (size_t x = 0; x < GLOBE_COLS; x++) {
+      if (x < width && y < height) {
+        // printf("%zu %zu %zu\n", x, y, image_idx);
+        idx = y * GLOBE_COLS + x;
 
-      image[i] = r;
-      image[i + 1] = g;
-      image[i + 2] = b;
+        if (globe_data[idx] == NO_DATA) {
+          r = 10;
+          g = 20;
+          b = 140;
+        } else {
+          elev_to_rgb(globe_data[idx], &r, &g, &b);
+        }
+        image[image_idx + 0] = r;
+        image[image_idx + 1] = g;
+        image[image_idx + 2] = b;
+        image_idx += 3;
+      }
+      lon += 0.008333;
     }
+    lon = -180.0;
+    lat -= 0.008333;
   }
 
-  // Write the image to a PNG file
+  // Write the image to a PNG file.
   if (!stbi_write_png(out_file, width, height, channels, image,
-                      width * channels)) {
+                      width * channels * sizeof(uint8_t))) {
     fprintf(stderr, "Failed to write image to file.\n");
     free(image);
     return 1;
   }
 
-  // Free the allocated memory
+  // Free allocated memory.
   free(image);
-
-  /*
-  if ((globe_img_file = fopen(out_file, "wb")) == NULL) {
-    perror("fopen");
-    exit(1);
-  }
-  fprintf(globe_img_file, "P6\n%zu %zu\n255\n", GLOBE_COLS, GLOBE_ROWS);
-  uint8_t r, g, b;
-  for (size_t i = 0; i < num_vals; i++) {
-    if (globe_data[i] == NO_DATA) {
-      r = 10;
-      g = 20;
-      b = 140;
-    } else {
-      elev_to_rgb(globe_data[i], &r, &g, &b);
-    }
-    r = 250;
-    g = 20;
-    b = 250;
-    fwrite(&r, 1, 1, globe_img_file);
-    fwrite(&g, 1, 1, globe_img_file);
-    fwrite(&b, 1, 1, globe_img_file);
-  }
-  fclose(globe_img_file);
-  */
-
   free(globe_data);
 
   return 0;
@@ -362,6 +401,15 @@ int main(int argc, char **argv) {
     int merge_result = merge(out);
     if (merge_result != 0)
       return merge_result;
+  } else if (strcmp(command, "table") == 0) {
+    if (in && out) {
+      int table_result = table(in, out);
+      if (table_result != 0)
+        return table_result;
+    } else {
+      printf("globe table requires -i, -o flags.\n");
+      return 1;
+    }
   } else if (strcmp(command, "render") == 0) {
     if (in && out) {
       int render_result = render(in, out);
