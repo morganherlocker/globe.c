@@ -40,7 +40,7 @@ void elev_to_rgb(int16_t value, uint8_t *r, uint8_t *g, uint8_t *b,
       *r = 130;
       *g = 98;
       *b = 95;
-    } else if (value <= 18) { // sand
+    } else if (value <= 50) { // sand
       *r = 107;
       *g = 128;
       *b = 75;
@@ -188,12 +188,11 @@ int merge(char *out_file) {
     }
     float mean = sum / num_vals;
 
+    // Copy chunk data row by row into global array.
+    size_t row_offset = chunk.row_offset;
     // Log debug info.
     printf("name: %s, count: %zu, mean: %.2f, min: %hd, max: %hd\n", chunk.name,
            num_vals, mean, min, max);
-
-    // Copy chunk data row by row into global array.
-    size_t row_offset = chunk.row_offset;
     for (size_t row = 0; row < chunk.num_rows; row++) {
       // Calculate the starting position in globe_data for this row.
       size_t globe_row_start =
@@ -213,9 +212,7 @@ int merge(char *out_file) {
     perror("fopen");
     exit(1);
   }
-
   fwrite(globe_data, sizeof(int16_t), GLOBE_CELLS, globe_bin_file);
-
   fclose(globe_bin_file);
 
   // Free data.
@@ -241,7 +238,7 @@ int table(char *in_file, char *out_file) {
   }
 
   // Read file into array.
-  fread(globe_data, sizeof(int16_t), GLOBE_CELLS / sizeof(int16_t), fp);
+  fread(globe_data, sizeof(int16_t), GLOBE_CELLS, fp);
   if (ferror(fp)) {
     perror("fread");
     fclose(fp);
@@ -302,7 +299,7 @@ int render(char *in_file, char *out_file) {
   }
 
   // Read file into array.
-  fread(globe_data, sizeof(int16_t), GLOBE_CELLS / sizeof(int16_t), fp);
+  fread(globe_data, sizeof(int16_t), GLOBE_CELLS, fp);
   if (ferror(fp)) {
     perror("fread");
     fclose(fp);
@@ -315,7 +312,7 @@ int render(char *in_file, char *out_file) {
 
   // Write .png image.
   printf("writing: %s\n", out_file);
-  size_t width = GLOBE_COLS / 1.5;
+  size_t width = GLOBE_COLS / 2;
   size_t height = GLOBE_ROWS;
   int channels = 3; // RGB
 
@@ -338,9 +335,7 @@ int render(char *in_file, char *out_file) {
     image_idx = y * width * channels;
     for (size_t x = 0; x < GLOBE_COLS; x++) {
       if (x < width && y < height) {
-        // printf("%zu %zu %zu\n", x, y, image_idx);
         idx = y * GLOBE_COLS + x;
-
         if (globe_data[idx] == NO_DATA) {
           r = 30;
           g = 40;
