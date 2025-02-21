@@ -271,7 +271,7 @@ int table(char *in_file, char *out_file) {
       idx = y * GLOBE_COLS + x;
       elevation = globe_data[idx];
 
-      if (elevation != NO_DATA && elevation != 0) {
+      if (elevation != NO_DATA) {
         fprintf(globe_csv_file, "%f,%f,%d\n", lon, lat, elevation);
       }
       lon += 0.008333;
