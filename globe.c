@@ -2,6 +2,7 @@
 #include "stb_image_write.h"
 
 #include <errno.h>
+#include <getopt.h>
 #include <math.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -77,9 +78,9 @@ void elev_to_rgb(int16_t value, uint8_t *r, uint8_t *g, uint8_t *b,
 
 void print_help() {
   printf("Usage:\n");
-  printf("globe -o ./globe.bin merge;\n");
-  printf("globe -i ./globe.bin -o globe.csv table;\n");
-  printf("globe -i ./globe.bin -o globe.png render;\n");
+  printf("globe merge -o ./globe.bin;\n");
+  printf("globe table -i ./globe.bin -o globe.csv;\n");
+  printf("globe render -i ./globe.bin -o globe.png;\n");
 }
 
 int merge(char *out_file) {
@@ -290,7 +291,6 @@ int render(char *in_file, char *out_file) {
   }
 
   FILE *fp;
-  printf("reading: %s\n", in_file);
   // Open file.
   if ((fp = fopen(in_file, "rb")) == NULL) {
     perror("fopen");
@@ -311,9 +311,8 @@ int render(char *in_file, char *out_file) {
   fclose(fp);
 
   // Write .png image.
-  printf("writing: %s\n", out_file);
   size_t width = GLOBE_COLS / 2;
-  size_t height = GLOBE_ROWS;
+  size_t height = GLOBE_ROWS / 2;
   int channels = 3; // RGB
 
   // Allocate memory for the image data
@@ -375,8 +374,20 @@ int main(int argc, char **argv) {
   char *in = NULL;
   char *out = NULL;
 
+  // Define long options
+  static struct option getopt_long_options[] = {
+      {"help", no_argument, 0, 'h'},
+      {"input", required_argument, 0, 'i'},
+      {"output", required_argument, 0, 'o'},
+      {"minlon", required_argument, 0, 'q'},
+      {"minlat", required_argument, 0, 'w'},
+      {"maxlon", required_argument, 0, 'e'},
+      {"maxlat", required_argument, 0, 'r'},
+      {0, 0, 0, 0}};
+
   // Parse flags.
-  while ((opt = getopt(argc, argv, "-hi:o:")) != -1) {
+  while ((opt = getopt_long(argc, argv, "-hi:o:", getopt_long_options, NULL)) !=
+         -1) {
     switch (opt) {
     case 'h':
       print_help();
@@ -391,25 +402,24 @@ int main(int argc, char **argv) {
         out = optarg;
       }
       break;
-    case '?':
-      fprintf(stderr, "Unknown option: %c\n", optopt);
-      return 1;
-    default:
-      return 1;
     }
   }
 
-  // Parse and execute command.
-  if (optind >= argc) {
-    fprintf(stderr, "Error: Command argument is required.\n");
+  command = argv[1];
+  if (command == NULL) {
     print_help();
     return 1;
   }
-  command = argv[optind];
+
   if (strcmp(command, "merge") == 0) {
-    int merge_result = merge(out);
-    if (merge_result != 0)
-      return merge_result;
+    if (out) {
+      int merge_result = merge(out);
+      if (merge_result != 0)
+        return merge_result;
+    } else {
+      printf("globe merge requires -o flag.\n");
+      return 1;
+    }
   } else if (strcmp(command, "table") == 0) {
     if (in && out) {
       int table_result = table(in, out);
@@ -429,7 +439,8 @@ int main(int argc, char **argv) {
       return 1;
     }
   } else {
-    printf("Unrecognized command. Exiting.\n");
+    printf("Unrecognized command. Usage: `globe <cmd> <-flags=n>`\n");
+    print_help();
     return 1;
   }
 

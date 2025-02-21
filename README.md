@@ -68,7 +68,7 @@ globe -h
 Flatten shards into a single global array and writes to raw bin file. `./globe.bin` is 1.7G raw, 231M zstd compressed.
 
 ```sh
-globe -i ./all10 -o ./globe.bin merge;
+globe merge -i ./all10 -o ./globe.bin;
 
 du -h globe.bin*
 # 1.7G    globe.bin
@@ -80,7 +80,7 @@ du -h globe.bin*
 Write a png of a bounding box.
 
 ```sh
-globe -i ./globe.bin -o globe.png render;
+globe render -i ./globe.bin -o globe.png;
 ```
 
 ## table
@@ -88,7 +88,7 @@ globe -i ./globe.bin -o globe.png render;
 Write csv table file, with the format: lon, lat, elevation.
 
 ```sh
-globe -i ./globe.bin -o globe.csv table;
+globe table -i ./globe.bin -o globe.csv;
 ```
 
 This csv can be converted to parquet with following duckdb command for more efficient storage and querying:
