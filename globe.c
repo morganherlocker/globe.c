@@ -80,7 +80,8 @@ void print_help() {
   printf("Usage:\n");
   printf("globe merge -o ./globe.bin;\n");
   printf("globe table -i ./globe.bin -o globe.csv;\n");
-  printf("globe render -i ./globe.bin -o globe.png;\n");
+  printf("globe render -i ./globe.bin -o globe.png --minlon=-180 --minlat=0 "
+         "--maxlon=0 --maxlat=90;\n");
 }
 
 int merge(char *out_file) {
@@ -283,7 +284,8 @@ int table(char *in_file, char *out_file) {
   return 0;
 }
 
-int render(char *in_file, char *out_file) {
+int render(char *in_file, char *out_file, float minlon, float minlat,
+           float maxlon, float maxlat) {
   int16_t *globe_data = malloc(GLOBE_CELLS * sizeof(int16_t));
   if (globe_data == NULL) {
     perror("globe malloc");
@@ -311,13 +313,21 @@ int render(char *in_file, char *out_file) {
   fclose(fp);
 
   // Write .png image.
-  size_t width = GLOBE_COLS / 2;
-  size_t height = GLOBE_ROWS / 2;
+  size_t minx = (size_t)round(((minlon + 180) / 360) * GLOBE_COLS);
+  size_t miny = (size_t)round(((180 - (maxlat + 90)) / 180) * GLOBE_ROWS);
+  size_t maxx = (size_t)round(((maxlon + 180) / 360) * GLOBE_COLS);
+  size_t maxy = (size_t)round(((180 - (minlat + 90)) / 180) * GLOBE_ROWS);
+  if (minx >= maxx || miny >= maxy) {
+    printf("Invalid bbox.");
+    free(globe_data);
+    return 1;
+  }
+  size_t width = maxx - minx;
+  size_t height = maxy - miny;
   int channels = 3; // RGB
 
   // Allocate memory for the image data
   uint8_t *image = malloc(width * height * channels);
-
   if (image == NULL) {
     fprintf(stderr, "Failed to allocate memory for image.\n");
     free(globe_data);
@@ -326,31 +336,23 @@ int render(char *in_file, char *out_file) {
 
   // Convert data to rgb.
   uint8_t r, g, b;
-  float lon = -180.0;
-  float lat = 90.0;
   size_t idx = 0;
   size_t image_idx = 0;
-  for (size_t y = 0; y < GLOBE_ROWS; y++) {
-    image_idx = y * width * channels;
-    for (size_t x = 0; x < GLOBE_COLS; x++) {
-      if (x < width && y < height) {
-        idx = y * GLOBE_COLS + x;
-        if (globe_data[idx] == NO_DATA) {
-          r = 30;
-          g = 40;
-          b = 80;
-        } else {
-          elev_to_rgb(globe_data[idx], &r, &g, &b, TERRAIN);
-        }
-        image[image_idx + 0] = r;
-        image[image_idx + 1] = g;
-        image[image_idx + 2] = b;
-        image_idx += 3;
+  for (size_t y = miny; y < maxy; y++) {
+    for (size_t x = minx; x < maxx; x++) {
+      idx = y * GLOBE_COLS + x;
+      if (globe_data[idx] == NO_DATA) {
+        r = 30;
+        g = 40;
+        b = 80;
+      } else {
+        elev_to_rgb(globe_data[idx], &r, &g, &b, TERRAIN);
       }
-      lon += 0.008333;
+      image[image_idx + 0] = r;
+      image[image_idx + 1] = g;
+      image[image_idx + 2] = b;
+      image_idx += channels;
     }
-    lon = -180.0;
-    lat -= 0.008333;
   }
 
   // Write the image to a PNG file.
@@ -358,6 +360,7 @@ int render(char *in_file, char *out_file) {
                       width * channels * sizeof(uint8_t))) {
     fprintf(stderr, "Failed to write image to file.\n");
     free(image);
+    free(globe_data);
     return 1;
   }
 
@@ -373,6 +376,10 @@ int main(int argc, char **argv) {
   char *command = NULL;
   char *in = NULL;
   char *out = NULL;
+  float minlon = INT16_MIN;
+  float minlat = INT16_MIN;
+  float maxlon = INT16_MIN;
+  float maxlat = INT16_MIN;
 
   // Define long options
   static struct option getopt_long_options[] = {
@@ -400,6 +407,26 @@ int main(int argc, char **argv) {
     case 'o':
       if (optarg && *optarg) {
         out = optarg;
+      }
+      break;
+    case 'q':
+      if (optarg && *optarg) {
+        minlon = atof(optarg);
+      }
+      break;
+    case 'w':
+      if (optarg && *optarg) {
+        minlat = atof(optarg);
+      }
+      break;
+    case 'e':
+      if (optarg && *optarg) {
+        maxlon = atof(optarg);
+      }
+      break;
+    case 'r':
+      if (optarg && *optarg) {
+        maxlat = atof(optarg);
       }
       break;
     }
@@ -430,12 +457,14 @@ int main(int argc, char **argv) {
       return 1;
     }
   } else if (strcmp(command, "render") == 0) {
-    if (in && out) {
-      int render_result = render(in, out);
+    if (in && out && minlon > INT16_MIN && minlat > INT16_MIN &&
+        maxlon > INT16_MIN && maxlat > INT16_MIN) {
+      int render_result = render(in, out, minlon, minlat, maxlon, maxlat);
       if (render_result != 0)
         return render_result;
     } else {
-      printf("globe render requires -i, -o flags.\n");
+      printf("globe render requires -i, -o --minlon, --minlat, --maxlon, "
+             "--maxlat flags.\n");
       return 1;
     }
   } else {
