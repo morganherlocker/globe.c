@@ -1,83 +1,109 @@
-
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-	<base target="_top">
-	<meta charset="utf-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1">
-	
-	<title>globe.c</title>
-	
-	<link rel="shortcut icon" type="image/x-icon" href="docs/images/favicon.ico" />
+  <head>
+    <base target="_top" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <title>globe.c</title>
 
-	<style>
-		html, body {
-			height: 100%;
-			margin: 0;
-			font:
-				14px "",
-				Monospace,
-				Arial,
-				sans-serif;
-			line-height: 1.5;
-			color: #494949;
-		}
-		#content {
-			float: left;
-			padding-top: 10px;
-			padding-left: 30px;
-			max-width: 500px;
-		}
-		.leaflet-container {
-			float: right;
-			max-width: 100%;
-			max-height: 100%;
-			margin:20px;
-		}
-	</style>
+    <link
+      rel="shortcut icon"
+      type="image/x-icon"
+      href="docs/images/favicon.ico"
+    />
 
-	
-</head>
-<body>
-<div id="content">
-	<h1>globe.c</h1>
-	<div>
-		<i><a href="https://github.com/morganherlocker/globe.c">github</a></i>
-		<p>
-		C parser & CLI toolset for the <a href="https://www.ngdc.noaa.gov/mgg/topo/report/globedocumentationmanual.pdf">Global Land One-kilometer Base Elevation (GLOBE)</a> dataset. GLOBE is a global 1km-resolution digital elevation model, compiled by NOAA in 1999.
-		<p>
-		The data is suitable for medium-resolution global terrain modeling. The raw data is 1.8GB uncompressed.
-		<p>
-		globe.c is provided as a single 72Kb executable, capable of loading the raw elevation data files into an efficient array, as well as converting the data into tabular or image formats.
-		<ul>
-			<li>Tabular global extracts (local only)</li>
-			<ul>
-				<li>globe.csv (7.3G)</li>
-				<li>globe.parquet (324M)</li>
-			</ul>
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+      crossorigin=""
+    />
+    <script
+      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+      crossorigin=""
+    ></script>
 
-			<li>Lossless tiled png images</li>
-			<ul>
-				<li><a href="1/0/0.png">1/0/0.png</a> (13M)</li>
-				<li><a href="1/0/1.png">1/0/1.png</a> (8.5M)</li>
-				<li><a href="1/1/0.png">1/1/0.png</a> (18M)</li>
-				<li><a href="1/0/1.png">1/0/1.png</a> (8.9M)</li>
-			</ul>
-		</ul>
-	</div>
-</div>
-<div id="map" style="width: 800px; height: 500px;"></div>
-<script>
-	const map = L.map('map').setView([0,0], 1);
-	const tiles = L.tileLayer('{z}/{x}/{y}.png', {
+    <style>
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+        font:
+          14px "",
+          Monospace,
+          Arial,
+          sans-serif;
+        line-height: 1.5;
+        color: #494949;
+      }
+      #content {
+        float: left;
+        padding-top: 10px;
+        padding-left: 30px;
+        max-width: 400px;
+      }
+      .leaflet-container {
+        float: right;
+        max-width: 100%;
+        max-height: 100%;
+        margin: 20px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="content">
+      <h1>globe.c</h1>
+      <div>
+        <i><a href="https://github.com/morganherlocker/globe.c">github</a></i>
+        <p>
+          C parser & CLI toolset for the
+          <a
+            href="https://www.ngdc.noaa.gov/mgg/topo/report/globedocumentationmanual.pdf"
+            >Global Land One-kilometer Base Elevation (GLOBE)</a
+          >
+          dataset. GLOBE is a global 1km-resolution digital elevation model,
+          compiled by NOAA in 1999.
+        </p>
+
+        <p>
+          The data is suitable for medium-resolution global terrain modeling.
+          The raw data is 1.8GB uncompressed.
+        </p>
+
+        <p>
+          globe.c is provided as a single 72Kb executable, capable of loading
+          the raw elevation data files into an efficient array, as well as
+          converting the data into tabular or image formats.
+        </p>
+
+        <ul>
+          <li>Tabular global extracts (local only)</li>
+          <ul>
+            <li>globe.csv (7.3G)</li>
+            <li>globe.parquet (324M)</li>
+          </ul>
+
+          <li>Lossless tiled png images</li>
+          <ul>
+            <li><a href="1/0/0.png">1/0/0.png</a> (13M)</li>
+            <li><a href="1/0/1.png">1/0/1.png</a> (8.5M)</li>
+            <li><a href="1/1/0.png">1/1/0.png</a> (18M)</li>
+            <li><a href="1/0/1.png">1/0/1.png</a> (8.9M)</li>
+          </ul>
+        </ul>
+      </div>
+    </div>
+    <div id="map" style="width: 1000px; height: 625px"></div>
+    <script>
+      const map = L.map("map").setView([0, 0], 2);
+      const tiles = L.tileLayer("{z}/{x}/{y}.png", {
         minZoom: 1,
-		maxNativeZoom:1,
-		maxZoom: 7,
-		attribution: 'NOAA GLOBE elevation dataset'
-	}).addTo(map);
-</script>
-</body>
+        maxNativeZoom: 2,
+        maxZoom: 7,
+        attribution: "NOAA GLOBE elevation dataset",
+      }).addTo(map);
+    </script>
+  </body>
 </html>
