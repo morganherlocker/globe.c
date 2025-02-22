@@ -97,11 +97,11 @@
     </div>
     <div id="map" style="width: 1000px; height: 625px"></div>
     <script>
-      const map = L.map("map").setView([0, 0], 2);
+      const map = L.map("map").setView([30, 0], 2);
       const tiles = L.tileLayer("{z}/{x}/{y}.png", {
-        minZoom: 1,
+        minZoom: 2,
         maxNativeZoom: 2,
-        maxZoom: 7,
+        maxZoom: 8,
         attribution: "NOAA GLOBE elevation dataset",
       }).addTo(map);
     </script>
