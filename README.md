@@ -1,6 +1,8 @@
 globe.c
 ---
 
+[demo](https://morganherlocker.github.io/globe.c/)
+
 C parser & CLI toolset for the [Global Land One-kilometer Base Elevation (GLOBE)](https://www.ngdc.noaa.gov/mgg/topo/report/globedocumentationmanual.pdf) dataset. GLOBE is a global 1km-resolution digital elevation model, compiled by NOAA in 1999.
 
 The data is suitable for medium-resolution global terrain modeling. The raw data is 1.8GB uncompressed.
