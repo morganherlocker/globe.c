@@ -28,6 +28,14 @@ struct Chunk {
 
 enum RGBMode { TERRAIN, GREYSCALE };
 
+void print_help() {
+  printf("Usage:\n");
+  printf("globe merge -o ./globe.bin;\n");
+  printf("globe table -i ./globe.bin -o globe.csv;\n");
+  printf("globe render -i ./globe.bin -o globe.png --minlon=-180 --minlat=0 "
+         "--maxlon=0 --maxlat=90;\n");
+}
+
 void elev_to_rgb(int16_t value, uint8_t *r, uint8_t *g, uint8_t *b,
                  enum RGBMode rmode) {
   uint8_t gray;
@@ -74,14 +82,6 @@ void elev_to_rgb(int16_t value, uint8_t *r, uint8_t *g, uint8_t *b,
     *b = gray;
     break;
   }
-}
-
-void print_help() {
-  printf("Usage:\n");
-  printf("globe merge -o ./globe.bin;\n");
-  printf("globe table -i ./globe.bin -o globe.csv;\n");
-  printf("globe render -i ./globe.bin -o globe.png --minlon=-180 --minlat=0 "
-         "--maxlon=0 --maxlat=90;\n");
 }
 
 int merge(char *out_file) {

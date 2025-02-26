@@ -1,9 +1,11 @@
-GLOBE.c
+globe.c
 ---
 
 C parser & CLI toolset for the [Global Land One-kilometer Base Elevation (GLOBE)](https://www.ngdc.noaa.gov/mgg/topo/report/globedocumentationmanual.pdf) dataset. GLOBE is a global 1km-resolution digital elevation model, compiled by NOAA in 1999.
 
 The data is suitable for medium-resolution global terrain modeling. The raw data is 1.8GB uncompressed.
+
+While NOAA provides GLOBE as a spatially sharded dataset, the goal of globe.c is essentially to merge the shards into a single view that can be more easily accessed in a variety of formats, without knowledge of the spatial sharding scheme. Unlike in 1999, today we can comfortably fit the entire dataset in memory on most machines used for geospatial processing, so the sharding is unnecessary complexity for most use cases.
 
 ## Download
 
@@ -71,8 +73,8 @@ Flatten shards into a single global array and writes to raw bin file. `./globe.b
 globe merge -i ./all10 -o ./globe.bin;
 
 du -h globe.bin*
-# 1.7G    globe.bin
-# 241M    globe.bin.zst
+1.7G    globe.bin
+241M    globe.bin.zst
 ```
 
 ## render
