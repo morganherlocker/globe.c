@@ -59,7 +59,7 @@
       <div>
         <i><a href="https://github.com/morganherlocker/globe.c">github</a></i>
         <p>
-          C parser & CLI toolset for the
+          CLI toolset for the
           <a
             href="https://www.ngdc.noaa.gov/mgg/topo/report/globedocumentationmanual.pdf"
             >Global Land One-kilometer Base Elevation (GLOBE)</a
@@ -76,22 +76,29 @@
         <p>
           globe.c is provided as a single 72Kb executable, capable of loading
           the raw elevation data files into an efficient array, as well as
-          converting the data into tabular or image formats.
+          converting the data into tabular or image formats. It is written in
+          C99.
         </p>
 
         <ul>
-          <li>Tabular global extracts (local only)</li>
+          <li>Unified raw binary</li>
           <ul>
-            <li>globe.csv (7.3G)</li>
-            <li>globe.parquet (324M)</li>
+            <li>globe.bin <em>(1.7G)</em></li>
+            <li>globe.bin.zst <em>(232M)</em></li>
+          </ul>
+
+          <li>Tabular global extracts</li>
+          <ul>
+            <li>globe.csv <em>(7.3G)</em></li>
+            <li>globe.parquet <em>(324M)</em></li>
           </ul>
 
           <li>Lossless tiled png images</li>
           <ul>
-            <li><a href="1/0/0.png">1/0/0.png</a> (13M)</li>
-            <li><a href="1/0/1.png">1/0/1.png</a> (8.5M)</li>
-            <li><a href="1/1/0.png">1/1/0.png</a> (18M)</li>
-            <li><a href="1/0/1.png">1/0/1.png</a> (8.9M)</li>
+            <li><a href="1/0/0.png">1/0/0.png</a> <em>(13M)</em></li>
+            <li><a href="1/0/1.png">1/0/1.png</a> <em>(8.5M)</em></li>
+            <li><a href="1/1/0.png">1/1/0.png</a> <em>(18M)</em></li>
+            <li><a href="1/0/1.png">1/0/1.png</a> <em>(8.9M)</em></li>
           </ul>
         </ul>
       </div>
